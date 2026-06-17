@@ -1,6 +1,6 @@
 // netlify/functions/save-subscription.js
 // Speichert die Push-Subscription des Nutzers (wird einmal beim App-Start aufgerufen)
-const { getStore } = require('@netlify/blobs');
+const { safeGetStore } = require('./_blob-helper');
 
 exports.handler = async (event) => {
   const headers = {
@@ -23,7 +23,7 @@ exports.handler = async (event) => {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid subscription' }) };
     }
 
-    const store = getStore('push-subscriptions');
+    const store = safeGetStore('push-subscriptions');
     const id = userId || 'default-user';
     await store.setJSON(id, subscription);
 
@@ -40,4 +40,3 @@ exports.handler = async (event) => {
     };
   }
 };
-
