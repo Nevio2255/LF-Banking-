@@ -2,7 +2,7 @@
 // Verschickt eine echte Push-Mitteilung an den Nutzer — funktioniert auch wenn
 // die App komplett geschlossen ist (echtes Web Push über Apple/Google).
 const webpush = require('web-push');
-const { getStore } = require('@netlify/blobs');
+const { safeGetStore } = require('./_blob-helper');
 
 webpush.setVapidDetails(
   'mailto:admin@luxefinds.example',
@@ -27,7 +27,7 @@ exports.handler = async (event) => {
     const title = body.title || 'LuxeFinds E-Banking';
     const message = body.body || 'Du hast eine neue Mitteilung.';
 
-    const store = getStore('push-subscriptions');
+    const store = safeGetStore('push-subscriptions');
     const subscription = await store.get(userId, { type: 'json' });
 
     if (!subscription) {
