@@ -5,7 +5,7 @@
 //   /sperren_<VN>      -> sperrt die Karte + schickt Push an den User
 //   /push_<VN> Text... -> schickt freien Text als Push an den User
 const webpush = require('web-push');
-const { getStore } = require('@netlify/blobs');
+const { safeGetStore } = require('./_blob-helper');
 
 webpush.setVapidDetails(
   'mailto:admin@luxefinds.example',
@@ -25,7 +25,7 @@ async function sendTelegramMessage(chatId, text) {
 }
 
 async function pushToUser(userId, title, body) {
-  const store = getStore('push-subscriptions');
+  const store = safeGetStore('push-subscriptions');
   const subscription = await store.get(userId, { type: 'json' });
   if (!subscription) return false;
   try {
@@ -46,7 +46,7 @@ exports.handler = async (event) => {
 
     const chatId = msg.chat.id;
     const text = msg.text.trim();
-    const statusStore = getStore('card-status');
+    const statusStore = safeGetStore('card-status');
 
     if (text.startsWith('/entsperren_')) {
       const vn = text.replace('/entsperren_', '');
