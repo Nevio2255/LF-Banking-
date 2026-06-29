@@ -1,0 +1,1401 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>LF Banking</title>
+<!-- PWA: App Name & Icon -->
+<meta name="application-name" content="LF Banking">
+<meta name="apple-mobile-web-app-title" content="LF Banking">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1d5c38">
+<!-- WICHTIG: statisches Manifest + statische Icons, damit iOS die App beim
+     Hinzufügen zum Home-Bildschirm korrekt als installierbare PWA erkennt
+     (eine per JS nachgeladene data:-URL wird von iOS oft ignoriert) -->
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon-180.png">
+<link rel="apple-touch-icon" sizes="152x152" href="./icon-152.png">
+<link rel="apple-touch-icon" sizes="167x167" href="./icon-167.png">
+<link rel="apple-touch-icon" sizes="180x180" href="./icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png">
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-font-smoothing:antialiased}
+html,body{height:100%;overflow:hidden;font-family:'Inter',system-ui,sans-serif}
+:root{
+  --a:#16a34a;--al:#22c55e;--ad:#14532d;--ab:rgba(22,163,74,.08);
+  --bg:#f8f9fa;--card:#ffffff;--bd:#e5e7eb;--t:#111827;--m:#6b7280;
+  --r:#ef4444;--y:#f59e0b;--gr:#16a34a;--shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);--shadow-lg:0 10px 40px rgba(0,0,0,.12);
+}
+body.dark{--bg:#0f0f13;--card:#1a1a22;--bd:#2a2a35;--t:#f1f5f9;--m:#94a3b8;--ab:rgba(22,163,74,.1);--shadow:0 1px 3px rgba(0,0,0,.3);--shadow-lg:0 10px 40px rgba(0,0,0,.5)}
+body.tp{--a:#7c3aed;--al:#a855f7;--ad:#4c1d95;--ab:rgba(124,58,237,.08)}
+body.tb{--a:#2563eb;--al:#3b82f6;--ad:#1e3a8a;--ab:rgba(37,99,235,.08)}
+body.tr{--a:#dc2626;--al:#ef4444;--ad:#991b1b;--ab:rgba(220,38,38,.08)}
+body.to{--a:#ea580c;--al:#f97316;--ad:#9a3412;--ab:rgba(234,88,12,.08)}
+body.tpk{--a:#db2777;--al:#ec4899;--ad:#9d174d;--ab:rgba(219,39,119,.08)}
+body.tt{--a:#0d9488;--al:#14b8a6;--ad:#0f766e;--ab:rgba(13,148,136,.08)}
+
+.screen{position:fixed;inset:0;max-width:430px;margin:0 auto;background:var(--bg);display:none;flex-direction:column;z-index:1;overflow:hidden}
+.screen.on{display:flex}
+
+/* ── SPLASH ─────────────────────────── */
+#ss{background:#fff;justify-content:center;align-items:center;gap:0;z-index:100;padding:0}
+.sp-wrap{width:min(260px,72vw);aspect-ratio:1;border-radius:22%;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 80px rgba(0,0,0,.22),0 4px 16px rgba(0,0,0,.1);animation:spPop .55s cubic-bezier(.34,1.56,.64,1)}
+@keyframes spPop{0%{transform:scale(0.6);opacity:0}100%{transform:scale(1);opacity:1}}
+.sp-top{background:#fff;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:10% 8% 6%;border-bottom:1px solid rgba(0,0,0,.06)}
+.sp-lf-box{border:4px solid #1a5c36;border-radius:4px;padding:10px 22px;font-size:clamp(30px,11vw,42px);font-weight:800;font-family:Georgia,serif;color:#1a5c36;line-height:1}
+.sp-brand-name{font-size:15px;font-weight:700;color:#1a5c36;letter-spacing:-.3px;line-height:1.1}
+.sp-bottom{background:#1a5c36;flex:1.1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6% 8% 10%}
+.sp-affiliate{font-size:clamp(18px,7vw,26px);font-weight:800;color:#fff;letter-spacing:3px;text-transform:uppercase}
+.sp-dot-aff{display:inline-block;width:.18em;height:.18em;background:#fff;border-radius:50%;margin-left:2px;vertical-align:super}
+.sp-dots{display:flex;gap:7px;margin-top:20px}
+.sp-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.3)}
+.sp-dot.lit{background:#fff;animation:dotPulse .8s ease-in-out infinite}
+.sp-dot:nth-child(2).lit{animation-delay:.15s}
+.sp-dot:nth-child(3).lit{animation-delay:.3s}
+@keyframes dotPulse{0%,80%,100%{transform:scale(1);opacity:.3}40%{transform:scale(1.3);opacity:1}}
+
+/* ── FID SETUP ──────────────────────── */
+#sf{justify-content:center;align-items:center;padding:40px 28px;text-align:center}
+.fid-ico-wrap{width:100px;height:100px;background:var(--ab);border-radius:28px;display:flex;align-items:center;justify-content:center;margin:0 auto 28px;font-size:52px;position:relative}
+.fid-ico-wrap::after{content:'';position:absolute;inset:-4px;border-radius:32px;border:2px solid var(--a);opacity:.3}
+.fid-h{font-size:26px;font-weight:700;color:var(--t);margin-bottom:10px}
+.fid-p{font-size:15px;color:var(--m);line-height:1.6;max-width:280px;margin:0 auto 32px}
+.fid-msg{font-size:13px;color:var(--a);min-height:18px;margin-bottom:18px}
+
+/* ── FID SCAN ───────────────────────── */
+#fsc{background:#000;justify-content:center;align-items:center;z-index:50}
+.scan-wrap{display:flex;flex-direction:column;align-items:center}
+.scan-ring{width:190px;height:190px;border-radius:50%;border:3px solid rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;position:relative;margin-bottom:28px}
+.scan-ring::before{content:'';position:absolute;inset:-6px;border-radius:50%;border:2px solid transparent;border-top-color:var(--a);border-right-color:var(--a);animation:scanSpin 1.4s linear infinite}
+@keyframes scanSpin{to{transform:rotate(360deg)}}
+.scan-ring.done::before{display:none;border:none}
+.scan-ring.done{border-color:var(--gr)}
+.scan-face{font-size:80px;line-height:1}
+.scan-result{font-size:60px;display:none}
+.scan-t{font-size:15px;color:rgba(255,255,255,.7);text-align:center}
+.scan-sub{font-size:13px;color:rgba(255,255,255,.35);margin-top:6px;text-align:center}
+.scan-skip{color:rgba(255,255,255,.35);font-size:13px;background:transparent;border:none;cursor:pointer;margin-top:32px;padding:8px 16px}
+
+/* ── PIN ────────────────────────────── */
+#sps,#spl{background:var(--bg)}
+.pin-screen{display:flex;flex-direction:column;height:100%}
+.pin-top{background:var(--a);padding:52px 24px 32px;text-align:center;flex-shrink:0}
+.pin-logo{font-size:32px;margin-bottom:6px}
+.pin-appname{font-size:18px;font-weight:700;color:#fff;letter-spacing:-.3px}
+.pin-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 24px 24px}
+.pin-lbl{font-size:16px;font-weight:500;color:var(--t);margin-bottom:28px;text-align:center}
+.pin-dots{display:flex;gap:16px;margin-bottom:12px}
+.pin-dot{width:13px;height:13px;border-radius:50%;border:2px solid var(--bd);transition:all .15s}
+.pin-dot.on{background:var(--a);border-color:var(--a);transform:scale(1.1)}
+.pin-err{font-size:13px;color:var(--r);margin-bottom:20px;min-height:18px;text-align:center}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:100%;max-width:300px}
+.pk{height:72px;background:var(--card);border-radius:50px;border:1px solid var(--bd);font-size:24px;font-weight:500;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--t);gap:1px;box-shadow:var(--shadow);transition:transform .1s,background .1s}
+.pk:active{background:var(--ab);transform:scale(.93);border-color:var(--a)}
+.pk-s{font-size:9px;color:var(--m);letter-spacing:1.5px;font-weight:500}
+.pk-sp{background:transparent;border:none;box-shadow:none;color:var(--a);font-size:20px;font-weight:600}
+.pk-sp:active{background:var(--ab);transform:scale(.9);border-color:transparent}
+
+/* ── LOGIN ──────────────────────────── */
+#sl{overflow-y:auto}
+.l-hero{background:var(--a);min-height:40vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 32px 48px;position:relative;overflow:hidden}
+.l-hero::before{content:'';position:absolute;width:300px;height:300px;border-radius:50%;background:rgba(255,255,255,.06);top:-100px;right:-80px}
+.l-hero::after{content:'';position:absolute;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.04);bottom:-80px;left:-60px}
+.l-ico{font-size:48px;margin-bottom:14px;position:relative;z-index:1}
+.l-name{font-size:30px;font-weight:800;color:#fff;letter-spacing:-.5px;position:relative;z-index:1}
+.l-sub{font-size:12px;color:rgba(255,255,255,.55);letter-spacing:2.5px;text-transform:uppercase;margin-top:5px;position:relative;z-index:1}
+.l-form{background:var(--card);border-radius:28px 28px 0 0;margin-top:-24px;padding:32px 24px 40px;flex:1}
+.l-form-title{font-size:22px;font-weight:700;color:var(--t);margin-bottom:4px}
+.l-form-sub{font-size:14px;color:var(--m);margin-bottom:24px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--m);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px}
+.field input{width:100%;height:52px;padding:0 16px;background:var(--bg);border:1.5px solid var(--bd);border-radius:14px;color:var(--t);font-size:16px;font-family:inherit;outline:none;transition:border-color .2s,box-shadow .2s}
+.field input:focus{border-color:var(--a);box-shadow:0 0 0 4px var(--ab)}
+.l-err{font-size:13px;color:var(--r);margin-bottom:12px;display:none;padding:10px 14px;background:rgba(239,68,68,.07);border-radius:10px;border:1px solid rgba(239,68,68,.15)}
+.btn-primary{width:100%;height:54px;background:var(--a);color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity .2s,transform .1s;letter-spacing:-.2px;margin-bottom:12px}
+.btn-primary:active{opacity:.85;transform:scale(.98)}
+.btn-outline{width:100%;height:52px;background:transparent;color:var(--a);border:1.5px solid var(--bd);border-radius:14px;font-size:15px;font-weight:500;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s}
+.btn-outline:active{background:var(--ab);border-color:var(--a)}
+
+/* ── APP ────────────────────────────── */
+#sa{overflow:hidden}
+.app{display:flex;flex-direction:column;height:100%}
+/* Header */
+.hdr{background:var(--a);flex-shrink:0;position:relative}
+.hdr-nav{height:54px;padding:0 20px;display:flex;align-items:center;justify-content:space-between}
+.hdr-back{color:#fff;font-size:28px;cursor:pointer;display:none;opacity:.9;font-weight:300;padding:0 12px 0 0;line-height:1}
+.hdr-logo{display:flex;align-items:center;gap:8px}
+.hdr-logo-ico{font-size:22px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.2))}
+.hdr-logo-name{font-size:16px;font-weight:700;color:#fff;letter-spacing:-.3px}
+.hdr-title{font-size:16px;font-weight:600;color:#fff;display:none;flex:1;text-align:center}
+.hdr-notif{width:36px;height:36px;background:rgba(255,255,255,.15);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:17px}
+.hdr-menu{display:flex;flex-direction:column;gap:4.5px;cursor:pointer;padding:4px}
+.hdr-menu span{display:block;width:20px;height:2px;background:#fff;border-radius:1px}
+/* Hero */
+.hdr-hero{padding:16px 20px 28px}
+.hero-greet{font-size:13px;color:rgba(255,255,255,.65);font-weight:400;margin-bottom:2px}
+.hero-name{font-size:22px;font-weight:700;color:#fff;letter-spacing:-.3px;margin-bottom:18px}
+.bal-card{background:rgba(255,255,255,.12);backdrop-filter:blur(10px);border-radius:20px;padding:18px 20px;border:1px solid rgba(255,255,255,.1)}
+.bal-label{font-size:11px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:1px;font-weight:500;margin-bottom:4px}
+.bal-amount{font-size:36px;font-weight:700;color:#fff;letter-spacing:-1px;margin-bottom:6px;line-height:1.1}
+.bal-sub{font-size:12px;color:rgba(255,255,255,.45);font-family:monospace;letter-spacing:.3px}
+/* Side menu */
+#smov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:none;max-width:430px;margin:0 auto;backdrop-filter:blur(2px)}
+#smov.on{display:block}
+#smenu{position:fixed;top:0;right:-100%;width:75%;max-width:300px;height:100%;background:var(--card);z-index:201;transition:right .3s cubic-bezier(.4,0,.2,1);border-left:1px solid var(--bd);overflow-y:auto;box-shadow:-20px 0 60px rgba(0,0,0,.15)}
+#smenu.on{right:0}
+.sm-top{background:var(--a);padding:56px 20px 24px;position:relative}
+.sm-cls{position:absolute;top:16px;right:16px;width:32px;height:32px;background:rgba(255,255,255,.15);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;cursor:pointer;border:none;font-family:inherit}
+.sm-avatar{width:52px;height:52px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:10px}
+.sm-name{font-size:17px;font-weight:600;color:#fff}
+.sm-vn{font-size:11px;color:rgba(255,255,255,.55);font-family:monospace;margin-top:2px}
+.sm-item{display:flex;align-items:center;gap:14px;padding:16px 20px;border-bottom:1px solid var(--bd);cursor:pointer;font-size:15px;color:var(--t);font-weight:500;transition:background .15s}
+.sm-item:active,.sm-item:hover{background:var(--bg)}
+.sm-item:last-child{border-bottom:none}
+.sm-ic{width:36px;height:36px;background:var(--ab);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.sm-red{color:var(--r)}.sm-red .sm-ic{background:rgba(239,68,68,.08)}
+/* Content */
+.cont{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+.panel{display:none}.panel.on{display:block}
+/* Quick Actions */
+.qa-wrap{background:var(--card);border-bottom:1px solid var(--bd);padding:4px 0}
+.qa-row{display:grid;grid-template-columns:repeat(4,1fr)}
+.qa-btn{display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 4px;cursor:pointer;transition:background .15s}
+.qa-btn:active{background:var(--ab)}
+.qa-ico{width:48px;height:48px;background:var(--ab);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:var(--shadow)}
+.qa-lbl{font-size:11px;color:var(--m);font-weight:500;letter-spacing:-.2px}
+/* Section title */
+.sec-hdr{display:flex;justify-content:space-between;align-items:center;padding:20px 20px 10px}
+.sec-title{font-size:16px;font-weight:700;color:var(--t)}
+.sec-link{font-size:13px;color:var(--a);font-weight:500;cursor:pointer}
+/* TX */
+.tx-card{background:var(--card);border-radius:0;border-top:1px solid var(--bd);border-bottom:1px solid var(--bd);overflow:hidden}
+.tx-row{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--bd);transition:background .1s}
+.tx-row:last-child{border-bottom:none}
+.tx-row:active{background:var(--bg)}
+.tx-ico{width:46px;height:46px;background:var(--ab);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.tx-info{flex:1;min-width:0}
+.tx-name{font-size:14px;font-weight:600;color:var(--t);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tx-date{font-size:12px;color:var(--m);margin-top:2px;font-weight:400}
+.tx-badge{display:inline-block;font-size:9px;padding:2px 7px;border-radius:100px;font-weight:600;margin-left:6px;background:rgba(245,158,11,.1);color:var(--y);border:1px solid rgba(245,158,11,.2)}
+.tx-amt{font-size:15px;font-weight:600;white-space:nowrap;letter-spacing:-.3px}
+.tin{color:var(--gr)}.tout{color:var(--t)}.tpen{color:var(--y)}
+.tx-empty{background:var(--card);padding:40px 24px;text-align:center;border-top:1px solid var(--bd)}
+.tx-empty-ico{font-size:40px;margin-bottom:12px}
+.tx-empty-t{font-size:15px;font-weight:600;color:var(--t);margin-bottom:4px}
+.tx-empty-s{font-size:13px;color:var(--m)}
+/* KARTE */
+.karte-bg{background:#050510;padding:24px 20px 0}
+.karte-scene{perspective:1000px}
+.kflip{width:100%;aspect-ratio:1.58;position:relative;transform-style:preserve-3d;transition:transform .6s cubic-bezier(.4,0,.2,1)}
+.kflip.f{transform:rotateY(180deg)}
+.kside,.kside-back{position:absolute;inset:0;border-radius:20px;overflow:hidden;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.kside-back{transform:rotateY(180deg)}
+.kbg{position:absolute;inset:0;transition:background .3s}
+.kshine{position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.1) 0%,transparent 50%,rgba(255,255,255,.05) 100%)}
+.kgrid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);background-size:24px 24px;opacity:.6}
+.kin{position:relative;z-index:1;height:100%;display:flex;flex-direction:column;padding:22px}
+.ktop{display:flex;justify-content:space-between;align-items:flex-start}
+.kbrand{font-size:16px;font-weight:800;color:rgba(255,255,255,.95);letter-spacing:-.3px}
+.kbrand-ico{font-size:18px;margin-right:5px}
+.ktype{font-size:11px;font-weight:700;color:rgba(255,255,255,.7);letter-spacing:2px;padding:4px 10px;border:1px solid rgba(255,255,255,.2);border-radius:6px;background:rgba(255,255,255,.08)}
+.kchip{width:36px;height:28px;background:linear-gradient(135deg,#d4af37,#f0d060,#c9951c);border-radius:6px;margin-top:16px;position:relative;overflow:hidden}
+.kchip::before{content:'';position:absolute;inset:4px;background:linear-gradient(135deg,rgba(255,255,255,.1),rgba(255,255,255,.3));border-radius:3px}
+.kchip::after{content:'';position:absolute;left:10px;top:4px;bottom:4px;width:2px;background:rgba(180,140,0,.4);border-radius:1px}
+.kbot{margin-top:auto}
+.knr-lbl{font-size:9px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+.knr{font-size:17px;color:rgba(255,255,255,.95);font-family:'Courier New',monospace;letter-spacing:3px;margin-bottom:14px;line-height:1}
+.krow{display:flex;align-items:flex-end;justify-content:space-between}
+.kfield-lbl{font-size:9px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.kfield-val{font-size:14px;color:rgba(255,255,255,.9);font-family:'Courier New',monospace;font-weight:500;letter-spacing:.5px}
+.kpayico{display:flex}
+.kpayico .c1{width:30px;height:30px;border-radius:50%;background:#eb001b;opacity:.9}
+.kpayico .c2{width:30px;height:30px;border-radius:50%;background:#f79e1b;opacity:.9;margin-left:-10px}
+.klock{position:absolute;inset:0;border-radius:20px;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:10;backdrop-filter:blur(8px);flex-direction:column;gap:8px}
+.klock-ico{font-size:44px}
+.klock-t{font-size:14px;color:rgba(255,255,255,.7);font-weight:500}
+/* Card back */
+.kback-in{position:relative;z-index:1;height:100%;display:flex;flex-direction:column}
+.kside-back .kback-in{transform:scaleX(-1)}
+.kstrip{background:rgba(0,0,0,.6);height:52px;margin-top:36px}
+.ksig{display:flex;align-items:center;gap:10px;padding:12px 20px}
+.ksig-lines{flex:1;height:28px;background:repeating-linear-gradient(0deg,rgba(255,255,255,.06) 0,rgba(255,255,255,.06) 2px,rgba(255,255,255,.02) 2px,rgba(255,255,255,.02) 5px);border-radius:4px}
+.kcvv{background:var(--card);border-radius:6px;padding:4px 12px;font-size:18px;font-weight:700;font-family:'Courier New',monospace;color:var(--t);letter-spacing:4px}
+.khint{text-align:center;font-size:12px;color:rgba(255,255,255,.2);padding:10px 0 18px;display:flex;align-items:center;justify-content:center;gap:6px}
+/* Card actions */
+.kacts{background:#050510;display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid rgba(255,255,255,.06)}
+.kact{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 4px;cursor:pointer;border:none;background:transparent;transition:opacity .15s}
+.kact:active{opacity:.6}
+.kact-ic{width:52px;height:52px;background:rgba(255,255,255,.06);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:22px;border:1px solid rgba(255,255,255,.06)}
+.kact-lbl{font-size:11px;color:rgba(255,255,255,.4);font-weight:500}
+.wallet-btn{display:flex;align-items:center;justify-content:center;gap:10px;background:#050510;width:100%;padding:16px;border:none;border-bottom:1px solid rgba(255,255,255,.05);cursor:pointer;font-size:14px;font-weight:600;color:rgba(255,255,255,.7);font-family:inherit;letter-spacing:-.2px;transition:background .15s}
+.wallet-btn:active{background:rgba(255,255,255,.03)}
+.wallet-btn span{display:flex;align-items:center;gap:8px}
+/* Profil */
+.pcard{background:var(--card);border-radius:0;border-top:1px solid var(--bd);border-bottom:1px solid var(--bd);margin-bottom:10px;overflow:hidden}
+.pcard-hdr{padding:14px 20px;font-size:11px;font-weight:700;color:var(--a);text-transform:uppercase;letter-spacing:.8px;border-bottom:1px solid var(--bd);background:var(--ab)}
+.prow{display:flex;justify-content:space-between;align-items:center;padding:15px 20px;border-bottom:1px solid var(--bd);cursor:default;transition:background .1s}
+.prow:last-child{border-bottom:none}
+.prow.tap{cursor:pointer}.prow.tap:active{background:var(--bg)}
+.plbl{font-size:15px;color:var(--t);font-weight:500}
+.pval{font-size:13px;color:var(--m);text-align:right;max-width:55%;word-break:break-all}
+.parr{color:var(--a);font-size:20px;font-weight:300}
+/* Design screen */
+.dsec{margin-bottom:10px}
+.dsec-t{padding:16px 20px 8px;font-size:11px;font-weight:700;color:var(--m);text-transform:uppercase;letter-spacing:.8px}
+.dsec-card{background:var(--card);border-top:1px solid var(--bd);border-bottom:1px solid var(--bd)}
+.col-grid{display:flex;flex-wrap:wrap;gap:12px;padding:16px 20px}
+.csw{width:46px;height:46px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:all .2s;position:relative;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow)}
+.csw.on{border-color:var(--t);transform:scale(1.1)}
+.csw:active{transform:scale(.9)}
+.csw-ck{font-size:18px;color:#fff;display:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,.3))}
+.csw.on .csw-ck{display:block}
+.card-grid{display:flex;flex-wrap:wrap;gap:10px;padding:16px 20px}
+.cdopt{flex:1;min-width:calc(50% - 5px);height:56px;border-radius:14px;cursor:pointer;border:2.5px solid transparent;overflow:hidden;transition:border-color .2s;box-shadow:var(--shadow)}
+.cdopt.on{border-color:var(--a)}
+.cdopt-in{width:100%;height:100%}
+.font-grid{display:flex;gap:10px;padding:16px 20px;flex-wrap:wrap}
+.fopt{padding:10px 18px;border-radius:100px;border:1.5px solid var(--bd);background:transparent;color:var(--t);font-size:14px;cursor:pointer;font-family:inherit;transition:all .15s;font-weight:500}
+.fopt.on{background:var(--a);color:#fff;border-color:var(--a);font-weight:600}
+.fopt:active{transform:scale(.95)}
+.tog-row{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--bd)}
+.tog-row:last-child{border-bottom:none}
+.tog-lbl{font-size:15px;font-weight:500;color:var(--t)}
+.tog-sub{font-size:12px;color:var(--m);margin-top:2px}
+.tog{width:50px;height:28px;background:var(--bd);border-radius:14px;cursor:pointer;position:relative;transition:background .25s;flex-shrink:0}
+.tog.on{background:var(--a)}
+.tog::after{content:'';position:absolute;width:22px;height:22px;background:#fff;border-radius:50%;top:3px;left:3px;transition:left .25s;box-shadow:0 2px 4px rgba(0,0,0,.2)}
+.tog.on::after{left:25px}
+/* Bottom nav */
+.bnav{background:var(--card);border-top:1px solid var(--bd);display:flex;flex-shrink:0;padding-bottom:env(safe-area-inset-bottom,0);box-shadow:0 -1px 0 var(--bd)}
+.bn{flex:1;padding:10px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;border:none;background:transparent;cursor:pointer;color:var(--m);font-size:10px;font-weight:500;border-top:2px solid transparent;transition:color .2s;font-family:inherit}
+.bn.on{color:var(--a);border-top-color:var(--a)}
+.bn svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
+.bn.on svg{transform:scale(1.1)}
+/* Modals */
+.mov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:none;align-items:flex-end;justify-content:center;max-width:430px;margin:0 auto;backdrop-filter:blur(4px)}
+.mov.on{display:flex}
+.mbox{background:var(--card);width:100%;border-radius:24px 24px 0 0;overflow:hidden;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);border-top:1px solid var(--bd)}
+.mbox-handle{width:40px;height:4px;background:var(--bd);border-radius:2px;margin:12px auto 0}
+.mhdr{padding:16px 24px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--bd)}
+.mhdr-title{font-size:18px;font-weight:700;color:var(--t)}
+.mclose{width:32px;height:32px;background:var(--bg);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;font-size:18px;color:var(--m);font-family:inherit}
+.mbody{padding:20px 24px 36px}
+.minfo{background:var(--ab);border-left:3px solid var(--a);padding:12px 14px;font-size:14px;color:var(--a);margin-bottom:18px;border-radius:0 10px 10px 0;line-height:1.5}
+.mfield{margin-bottom:16px}
+.mfield label{display:block;font-size:12px;font-weight:600;color:var(--m);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px}
+.mfield input{width:100%;height:50px;padding:0 16px;background:var(--bg);border:1.5px solid var(--bd);border-radius:12px;color:var(--t);font-size:16px;font-family:inherit;outline:none;transition:border-color .2s,box-shadow .2s}
+.mfield input:focus{border-color:var(--a);box-shadow:0 0 0 4px var(--ab)}
+.mbtn{width:100%;height:52px;background:var(--a);color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:6px;transition:opacity .2s,transform .1s}
+.mbtn:active{opacity:.85;transform:scale(.98)}
+.mcan{width:100%;height:50px;background:transparent;color:var(--m);border:1.5px solid var(--bd);border-radius:14px;font-size:15px;cursor:pointer;font-family:inherit;margin-top:10px;font-weight:500}
+/* Toast */
+.toast{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 82px);left:50%;transform:translateX(-50%);padding:12px 24px;border-radius:100px;font-size:14px;font-weight:500;z-index:9999;display:none;white-space:nowrap;max-width:calc(100% - 40px);text-align:center;box-shadow:var(--shadow-lg);animation:toastIn .3s cubic-bezier(.34,1.56,.64,1)}
+@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.toast.ok{background:#111827;color:#fff}
+.toast.err{background:var(--r);color:#fff}
+/* Status bar space */
+.safe-top{height:env(safe-area-inset-top,44px);background:var(--a);flex-shrink:0;display:none}
+/* Smooth scrolling */
+.cont{scroll-behavior:smooth;-webkit-overflow-scrolling:touch}
+/* Paddings */
+.pb{padding-bottom:20px}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<!-- ═══ SPLASH ═══ -->
+<div class="screen on" id="ss">
+  <div class="sp-wrap">
+    <div class="sp-top">
+      <div class="sp-lf-box">LF</div>
+      <div class="sp-brand-name">LuxeFinds</div>
+    </div>
+    <div class="sp-bottom">
+      <div class="sp-affiliate">BANKING<span class="sp-dot-aff"></span></div>
+      <div class="sp-dots">
+        <div class="sp-dot lit"></div>
+        <div class="sp-dot lit"></div>
+        <div class="sp-dot lit"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ FID SETUP ═══ -->
+<div class="screen" id="sf">
+  <div class="fid-ico-wrap">👤</div>
+  <h2 class="fid-h">Face ID aktivieren</h2>
+  <p class="fid-p">Melde dich in Zukunft schnell und sicher mit deinem Gesicht oder Fingerabdruck an.</p>
+  <div class="fid-msg" id="fid-msg"></div>
+  <button class="btn-primary" style="max-width:300px;width:100%;margin-bottom:12px" onclick="setupFID()">Face ID / Touch ID einrichten</button>
+  <button class="btn-outline" style="max-width:300px;width:100%" onclick="gotoPinSetup()">Lieber PIN verwenden</button>
+</div>
+
+<!-- ═══ FID SCAN ═══ -->
+<div class="screen" id="fsc">
+  <div class="scan-wrap">
+    <div class="scan-ring" id="scan-ring">
+      <div class="scan-face" id="scan-face">👤</div>
+      <div class="scan-result" id="scan-result">✅</div>
+    </div>
+    <div class="scan-t" id="scan-t">Gesicht wird erkannt...</div>
+    <div class="scan-sub" id="scan-sub">Halte dein Gerät auf Augenhöhe</div>
+    <button class="scan-skip" onclick="fallbackPin()">PIN verwenden</button>
+  </div>
+</div>
+
+<!-- ═══ PIN SETUP ═══ -->
+<div class="screen" id="sps">
+  <div class="pin-screen">
+    <div class="pin-top">
+      <div class="pin-logo" id="ps-ico">⚡</div>
+      <div class="pin-appname">LF Banking</div>
+    </div>
+    <div class="pin-body">
+      <div class="pin-lbl" id="ps-lbl">6-stelligen PIN erstellen</div>
+      <div class="pin-dots" id="ps-dots">
+        <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
+        <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
+      </div>
+      <div class="pin-err" id="ps-err"></div>
+      <div class="pin-pad">
+        <div class="pk" onclick="psK('1')">1</div>
+        <div class="pk" onclick="psK('2')">2<div class="pk-s">ABC</div></div>
+        <div class="pk" onclick="psK('3')">3<div class="pk-s">DEF</div></div>
+        <div class="pk" onclick="psK('4')">4<div class="pk-s">GHI</div></div>
+        <div class="pk" onclick="psK('5')">5<div class="pk-s">JKL</div></div>
+        <div class="pk" onclick="psK('6')">6<div class="pk-s">MNO</div></div>
+        <div class="pk" onclick="psK('7')">7<div class="pk-s">PQRS</div></div>
+        <div class="pk" onclick="psK('8')">8<div class="pk-s">TUV</div></div>
+        <div class="pk" onclick="psK('9')">9<div class="pk-s">WXYZ</div></div>
+        <div style="visibility:hidden" class="pk"></div>
+        <div class="pk" onclick="psK('0')">0</div>
+        <div class="pk pk-sp" onclick="pDel('ps')">⌫</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PIN LOGIN ═══ -->
+<div class="screen" id="spl">
+  <div class="pin-screen">
+    <div class="pin-top">
+      <div class="pin-logo" id="pl-ico">⚡</div>
+      <div class="pin-appname">LF Banking</div>
+    </div>
+    <div class="pin-body">
+      <div class="pin-lbl">PIN eingeben</div>
+      <div class="pin-dots" id="pl-dots">
+        <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
+        <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
+      </div>
+      <div class="pin-err" id="pl-err"></div>
+      <div class="pin-pad">
+        <div class="pk" onclick="plK('1')">1</div>
+        <div class="pk" onclick="plK('2')">2<div class="pk-s">ABC</div></div>
+        <div class="pk" onclick="plK('3')">3<div class="pk-s">DEF</div></div>
+        <div class="pk" onclick="plK('4')">4<div class="pk-s">GHI</div></div>
+        <div class="pk" onclick="plK('5')">5<div class="pk-s">JKL</div></div>
+        <div class="pk" onclick="plK('6')">6<div class="pk-s">MNO</div></div>
+        <div class="pk" onclick="plK('7')">7<div class="pk-s">PQRS</div></div>
+        <div class="pk" onclick="plK('8')">8<div class="pk-s">TUV</div></div>
+        <div class="pk" onclick="plK('9')">9<div class="pk-s">WXYZ</div></div>
+        <div class="pk pk-sp" onclick="tryFIDLogin()">👤</div>
+        <div class="pk" onclick="plK('0')">0</div>
+        <div class="pk pk-sp" onclick="pDel('pl')">⌫</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ LOGIN ═══ -->
+<div class="screen" id="sl">
+  <div class="l-hero">
+    <div class="l-ico" id="l-ico">⚡</div>
+    <div class="l-name">LuxeFinds</div>
+    <div class="l-sub" id="l-sub">Affiliate</div>
+  </div>
+  <div class="l-form">
+    <div class="l-form-title">Willkommen zurück</div>
+    <div class="l-form-sub">Melde dich mit deinen Zugangsdaten an</div>
+    <div class="field"><label>Vertragsnummer</label><input id="l-vn" placeholder="LF-004" autocomplete="username" oninput="this.value=this.value.toUpperCase()"></div>
+    <div class="field"><label>Passwort</label><input id="l-pw" type="password" placeholder="Dein Passwort" autocomplete="current-password"></div>
+    <div class="l-err" id="l-err"></div>
+    <button class="btn-primary" onclick="doLogin()">Anmelden</button>
+    <button class="btn-outline" onclick="tryFIDLogin()" id="l-fid-btn">
+      <span>👤</span> Mit Face ID / Touch ID
+    </button>
+  </div>
+</div>
+
+<!-- ═══ APP ═══ -->
+<div class="screen" id="sa">
+  <div class="app">
+    <!-- Header -->
+    <div class="hdr" id="hdr">
+      <div class="hdr-nav">
+        <div class="hdr-back" id="hdr-back" onclick="goHome()">‹</div>
+        <div class="hdr-logo" id="hdr-logo">
+          <div class="hdr-logo-ico" id="hdr-ico">⚡</div>
+          <div class="hdr-logo-name">LuxeFinds</div>
+        </div>
+        <div class="hdr-title" id="hdr-title"></div>
+        <div class="hdr-right" style="display:flex;align-items:center;gap:10px">
+          <div class="hdr-menu" onclick="openMenu()"><span></span><span></span><span></span></div>
+        </div>
+      </div>
+      <div id="hdr-hero">
+        <div class="hdr-hero">
+          <div class="hero-greet" id="hero-greet">Guten Tag,</div>
+          <div class="hero-name" id="hero-name">–</div>
+          <div class="bal-card">
+            <div class="bal-label">Verfügbares Guthaben</div>
+            <div class="bal-amount" id="bal-amt">0.00 CHF</div>
+            <div class="bal-sub" id="bal-vn">–</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Side Menu -->
+    <div id="smov" onclick="closeMenu()"></div>
+    <div id="smenu">
+      <div class="sm-top">
+        <button class="sm-cls" onclick="closeMenu()">✕</button>
+        <div class="sm-avatar">⚡</div>
+        <div class="sm-name" id="sm-name">–</div>
+        <div class="sm-vn" id="sm-vn">–</div>
+      </div>
+      <div class="sm-item" onclick="navTo('home');closeMenu()"><div class="sm-ic">🏠</div>Übersicht</div>
+      <div class="sm-item" onclick="navTo('karte');closeMenu()"><div class="sm-ic">💳</div>Meine Karte</div>
+      <div class="sm-item" onclick="navTo('verlauf');closeMenu()"><div class="sm-ic">📋</div>Kontoauszug</div>
+      <div class="sm-item" onclick="navTo('profil');closeMenu()"><div class="sm-ic">👤</div>Profil</div>
+      <div class="sm-item" onclick="navTo('design');closeMenu()"><div class="sm-ic">🎨</div>Design</div>
+      <div class="sm-item sm-red" onclick="doLogout()"><div class="sm-ic">🚪</div>Abmelden</div>
+    </div>
+
+    <!-- Content -->
+    <div class="cont">
+
+      <!-- HOME -->
+      <div class="panel on" id="p-home">
+        <div class="qa-wrap">
+          <div class="qa-row">
+            <div class="qa-btn" onclick="openM('einz')"><div class="qa-ico">💰</div><div class="qa-lbl">Einzahlen</div></div>
+            <div class="qa-btn" onclick="openM('send')"><div class="qa-ico">💸</div><div class="qa-lbl">Senden</div></div>
+            <div class="qa-btn" onclick="navTo('karte')"><div class="qa-ico">💳</div><div class="qa-lbl">Karte</div></div>
+            <div class="qa-btn" onclick="navTo('verlauf')"><div class="qa-ico">📋</div><div class="qa-lbl">Verlauf</div></div>
+          </div>
+        </div>
+        <div class="sec-hdr">
+          <div class="sec-title">Letzte Transaktionen</div>
+          <div class="sec-link" onclick="navTo('verlauf')">Alle anzeigen</div>
+        </div>
+        <div id="tx-home"></div>
+        <div style="height:20px"></div>
+      </div>
+
+      <!-- KARTE -->
+      <div class="panel" id="p-karte">
+        <div class="karte-bg">
+          <div class="karte-scene" onclick="flipCard()">
+            <div class="kflip" id="kflip">
+              <!-- FRONT -->
+              <div class="kside">
+                <div class="kbg" id="kbg"></div>
+                <div class="kgrid"></div><div class="kshine"></div>
+                <div class="kin">
+                  <div class="ktop">
+                    <div class="kbrand"><span class="kbrand-ico">⚡</span>LuxeFinds</div>
+                    <div class="ktype">VISA</div>
+                  </div>
+                  <div class="kchip"></div>
+                  <div class="kbot">
+                    <div class="knr-lbl">Kartennummer</div>
+                    <div class="knr" id="knr">•••• •••• •••• ••••</div>
+                    <div class="krow">
+                      <div><div class="kfield-lbl">Inhaber</div><div class="kfield-val" id="knm">– –</div></div>
+                      <div><div class="kfield-lbl">Gültig bis</div><div class="kfield-val" id="kexp">––/––</div></div>
+                      <div class="kpayico"><div class="c1"></div><div class="c2"></div></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="klock" id="klock">
+                  <div class="klock-ico">🔒</div>
+                  <div class="klock-t">Karte gesperrt</div>
+                </div>
+              </div>
+              <!-- BACK -->
+              <div class="kside kside-back">
+                <div class="kbg" id="kbg2"></div>
+                <div class="kshine"></div>
+                <div class="kback-in">
+                  <div class="kstrip"></div>
+                  <div class="ksig">
+                    <div class="ksig-lines"></div>
+                    <div class="kcvv" id="kcvv">•••</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="khint">
+            <span>↔️</span> Tippe oder wische zum Umdrehen
+          </div>
+          <div class="kacts">
+            <button class="kact" onclick="openM('send')"><div class="kact-ic">💸</div><div class="kact-lbl">Senden</div></button>
+            <button class="kact" onclick="toggleLock()"><div class="kact-ic" id="lock-ic">🔓</div><div class="kact-lbl" id="lock-lb">Sperren</div></button>
+            <button class="kact" onclick="openM('einz')"><div class="kact-ic">💰</div><div class="kact-lbl">Einzahlen</div></button>
+            <button class="kact" onclick="openM('det')"><div class="kact-ic">👁️</div><div class="kact-lbl">Details</div></button>
+          </div>
+          <button class="wallet-btn" onclick="showWallet()">
+            <span>🍎 Apple Wallet &nbsp;·&nbsp; 🤖 Google Wallet</span>
+          </button>
+        </div>
+        <div class="sec-hdr" style="background:var(--bg)"><div class="sec-title">Letzte Transaktionen</div></div>
+        <div id="tx-karte"></div>
+        <div style="height:20px;background:var(--bg)"></div>
+      </div>
+
+      <!-- VERLAUF -->
+      <div class="panel" id="p-verlauf">
+        <div class="sec-hdr"><div class="sec-title">Alle Transaktionen</div></div>
+        <div id="tx-all"></div>
+        <div style="height:20px"></div>
+      </div>
+
+      <!-- PROFIL -->
+      <div class="panel" id="p-profil">
+        <div style="height:12px"></div>
+        <div class="pcard"><div class="pcard-hdr">Persönliche Daten</div>
+          <div class="prow"><div class="plbl">Name</div><div class="pval" id="pnm">–</div></div>
+          <div class="prow"><div class="plbl">Vertragsnr.</div><div class="pval" id="pvn" style="font-family:monospace;color:var(--a);font-size:14px">–</div></div>
+          <div class="prow"><div class="plbl">E-Mail</div><div class="pval" id="pem">–</div></div>
+          <div class="prow"><div class="plbl">Telefon</div><div class="pval" id="ptel">–</div></div>
+          <div class="prow"><div class="plbl">Konto seit</div><div class="pval" id="pdat">–</div></div>
+        </div>
+        <div class="pcard"><div class="pcard-hdr">Sicherheit</div>
+          <div class="prow tap" onclick="openM('pw')"><div class="plbl">Passwort ändern</div><div class="parr">›</div></div>
+          <div class="prow tap" onclick="setupFID()"><div class="plbl">Face ID / Touch ID</div><div class="pval" id="pfid">Einrichten</div></div>
+          <div class="prow tap" onclick="gotoPinChange()"><div class="plbl">PIN ändern</div><div class="parr">›</div></div>
+        </div>
+        <div class="pcard"><div class="pcard-hdr">Einstellungen</div>
+          <div class="prow tap" onclick="navTo('design')"><div class="plbl">App Design</div><div class="parr">›</div></div>
+        </div>
+        <div class="pcard"><div class="pcard-hdr">🔔 Benachrichtigungen</div>
+          <div class="prow"><div class="plbl">Push Status</div><div class="pval" id="push-status">–</div></div>
+          <div class="prow tap" onclick="testPushNotification()"><div class="plbl">Test-Mitteilung senden</div><div class="parr" id="push-test-arr">›</div></div>
+        </div>
+        <div style="padding:0 16px;margin-top:4px">
+          <button style="width:100%;height:52px;background:transparent;border:1.5px solid var(--r);color:var(--r);border-radius:14px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit" onclick="doLogout()">Abmelden</button>
+        </div>
+        <div style="height:20px"></div>
+      </div>
+
+      <!-- DESIGN -->
+      <div class="panel" id="p-design">
+        <div style="height:8px"></div>
+        <div class="dsec">
+          <div class="dsec-t">🎨 Hauptfarbe</div>
+          <div class="dsec-card">
+            <div class="col-grid">
+              <div class="csw on" data-t="" style="background:#16a34a" onclick="setT('',this)"><div class="csw-ck">✓</div></div>
+              <div class="csw" data-t="tp" style="background:#7c3aed" onclick="setT('tp',this)"><div class="csw-ck">✓</div></div>
+              <div class="csw" data-t="tb" style="background:#2563eb" onclick="setT('tb',this)"><div class="csw-ck">✓</div></div>
+              <div class="csw" data-t="tr" style="background:#dc2626" onclick="setT('tr',this)"><div class="csw-ck">✓</div></div>
+              <div class="csw" data-t="to" style="background:#ea580c" onclick="setT('to',this)"><div class="csw-ck">✓</div></div>
+              <div class="csw" data-t="tpk" style="background:#db2777" onclick="setT('tpk',this)"><div class="csw-ck">✓</div></div>
+              <div class="csw" data-t="tt" style="background:#0d9488" onclick="setT('tt',this)"><div class="csw-ck">✓</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="dsec">
+          <div class="dsec-t">🃏 Kartendesign</div>
+          <div class="dsec-card">
+            <div class="card-grid">
+              <div class="cdopt on" data-c="linear-gradient(135deg,#0f3d22,#166534,#15803d)" onclick="setC(this)"><div class="cdopt-in" style="background:linear-gradient(135deg,#0f3d22,#166534,#15803d)"></div></div>
+              <div class="cdopt" data-c="linear-gradient(135deg,#0a0a12,#1a1a28,#252540)" onclick="setC(this)"><div class="cdopt-in" style="background:linear-gradient(135deg,#0a0a12,#1a1a28,#252540)"></div></div>
+              <div class="cdopt" data-c="linear-gradient(135deg,#1e3a8a,#1d4ed8,#2563eb)" onclick="setC(this)"><div class="cdopt-in" style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8,#2563eb)"></div></div>
+              <div class="cdopt" data-c="linear-gradient(135deg,#7c1d6f,#be185d,#db2777)" onclick="setC(this)"><div class="cdopt-in" style="background:linear-gradient(135deg,#7c1d6f,#be185d,#db2777)"></div></div>
+              <div class="cdopt" data-c="linear-gradient(135deg,#1a0a00,#451a03,#92400e)" onclick="setC(this)"><div class="cdopt-in" style="background:linear-gradient(135deg,#1a0a00,#451a03,#92400e)"></div></div>
+              <div class="cdopt" data-c="linear-gradient(135deg,#0c0024,#1e0050,#3b0070)" onclick="setC(this)"><div class="cdopt-in" style="background:linear-gradient(135deg,#0c0024,#1e0050,#3b0070)"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="dsec">
+          <div class="dsec-t">✍️ Schriftart</div>
+          <div class="dsec-card">
+            <div class="font-grid">
+              <div class="fopt on" data-f="" onclick="setF('',this)">Standard</div>
+              <div class="fopt" data-f="fr" onclick="setF('fr',this)" style="font-family:system-ui">Rund</div>
+              <div class="fopt" data-f="fm" onclick="setF('fm',this)" style="font-family:monospace">Mono</div>
+            </div>
+          </div>
+        </div>
+        <div class="dsec">
+          <div class="dsec-t">🌙 Darstellung</div>
+          <div class="dsec-card">
+            <div class="tog-row">
+              <div><div class="tog-lbl">Dark Mode</div><div class="tog-sub">Dunkles Design aktivieren</div></div>
+              <div class="tog" id="dk-tog" onclick="togDark()"></div>
+            </div>
+          </div>
+        </div>
+        <div style="padding:14px 20px;font-size:12px;color:var(--m);text-align:center">Einstellungen werden automatisch gespeichert</div>
+        <div style="height:20px"></div>
+      </div>
+
+    </div><!-- cont -->
+
+    <!-- Bottom Nav -->
+    <nav class="bnav">
+      <button class="bn on" onclick="navTo('home',this)">
+        <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home
+      </button>
+      <button class="bn" onclick="navTo('karte',this)">
+        <svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Karte
+      </button>
+      <button class="bn" onclick="navTo('verlauf',this)">
+        <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Verlauf
+      </button>
+      <button class="bn" onclick="navTo('profil',this)">
+        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Profil
+      </button>
+    </nav>
+  </div>
+</div>
+
+<!-- ═══ MODALS ═══ -->
+<div class="mov" id="mover" onclick="if(event.target===this)closeM()">
+  <div class="mbox" id="m-einz" style="display:none">
+    <div class="mbox-handle"></div>
+    <div class="mhdr"><div class="mhdr-title">💰 Einzahlung beantragen</div><button class="mclose" onclick="closeM()">✕</button></div>
+    <div class="mbody">
+      <div class="minfo">Deine Anfrage wird innerhalb von 24 Stunden geprüft und deinem Konto gutgeschrieben.</div>
+      <div class="mfield"><label>Betrag (CHF)</label><input id="ei-a" type="number" step="0.01" min="1" placeholder="0.00" inputmode="decimal"></div>
+      <button class="mbtn" onclick="sendEinz()">Anfrage senden</button>
+      <button class="mcan" onclick="closeM()">Abbrechen</button>
+    </div>
+  </div>
+  <div class="mbox" id="m-send" style="display:none">
+    <div class="mbox-handle"></div>
+    <div class="mhdr"><div class="mhdr-title">💸 Überweisung</div><button class="mclose" onclick="closeM()">✕</button></div>
+    <div class="mbody">
+      <div class="minfo">Überweisungen sind nur an andere LuxeFinds Karten möglich. Bearbeitung innerhalb 24h.</div>
+      <div class="mfield"><label>Empfänger Name</label><input id="sn-nm" placeholder="Vorname Nachname" autocomplete="off"></div>
+      <div class="mfield"><label>Kartennummer</label><input id="sn-kt" placeholder="4276 XXXX XXXX XXXX" maxlength="19" inputmode="numeric" oninput="fmtKt(this)"></div>
+      <div class="mfield"><label>Betrag (CHF)</label><input id="sn-am" type="number" step="0.01" placeholder="0.00" inputmode="decimal"><div style="font-size:12px;color:var(--m);margin-top:6px" id="sn-mx"></div></div>
+      <button class="mbtn" onclick="sendSend()">Jetzt senden</button>
+      <button class="mcan" onclick="closeM()">Abbrechen</button>
+    </div>
+  </div>
+  <div class="mbox" id="m-det" style="display:none">
+    <div class="mbox-handle"></div>
+    <div class="mhdr"><div class="mhdr-title">👁️ Kartendetails</div><button class="mclose" onclick="closeM()">✕</button></div>
+    <div class="mbody">
+      <div class="mfield"><label>Vollständige Kartennummer</label><input id="d-nr" readonly style="font-family:monospace;letter-spacing:2px;color:var(--a);font-size:15px"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="mfield"><label>Ablaufdatum</label><input id="d-exp" readonly style="font-family:monospace;color:var(--a)"></div>
+        <div class="mfield"><label>CVV</label><input id="d-cvv" readonly style="font-family:monospace;font-weight:700;color:var(--a);font-size:18px"></div>
+      </div>
+      <div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--r);margin-top:4px">🔒 Teile diese Daten niemals mit anderen</div>
+      <button class="mcan" style="margin-top:14px" onclick="closeM()">Schliessen</button>
+    </div>
+  </div>
+  <div class="mbox" id="m-pw" style="display:none">
+    <div class="mbox-handle"></div>
+    <div class="mhdr"><div class="mhdr-title">🔑 Passwort ändern</div><button class="mclose" onclick="closeM()">✕</button></div>
+    <div class="mbody">
+      <div class="mfield"><label>Aktuelles Passwort</label><input id="pw-a" type="password" autocomplete="current-password"></div>
+      <div class="mfield"><label>Neues Passwort</label><input id="pw-n" type="password" autocomplete="new-password"></div>
+      <div class="mfield"><label>Passwort bestätigen</label><input id="pw-b" type="password" autocomplete="new-password"></div>
+      <button class="mbtn" onclick="sendPW()">Passwort ändern</button>
+      <button class="mcan" onclick="closeM()">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// DEMO DATA
+// ══════════════════════════════════════════════════════
+const DEMO={
+  name:"Nevio Ramspacher",vorname:"Nevio",vertragsnr:"LF-004",
+  email:"nevio@luxefinds.ch",telefon:"076 798 51 23",
+  kartennr:"4276 8814 5523 9901",ablaufdatum:"04/30",cvv:"847",
+  guthaben:247.50,karte_gesperrt:false,erstellt:"21.04.2026",
+  transaktionen:[
+    {typ:"ausgabe",betrag:18.40,haendler:"Coop",emoji:"🛒",datum:"2026-06-14",zeit:"14:22",status:"confirmed"},
+    {typ:"provision",betrag:21.00,haendler:"Provision LuxeFinds",emoji:"🎯",datum:"2026-06-13",zeit:"09:15",status:"confirmed"},
+    {typ:"ueberweisung",betrag:50.00,haendler:"Transfer an Jerome",emoji:"💸",datum:"2026-06-12",zeit:"16:44",status:"pending"},
+    {typ:"einzahlung",betrag:100.00,haendler:"Einzahlung",emoji:"💰",datum:"2026-06-10",zeit:"11:30",status:"confirmed"},
+    {typ:"ausgabe",betrag:32.90,haendler:"Migros",emoji:"🛍️",datum:"2026-06-09",zeit:"13:05",status:"confirmed"},
+    {typ:"ausgabe",betrag:5.50,haendler:"McDonald's",emoji:"🍔",datum:"2026-06-08",zeit:"12:11",status:"confirmed"},
+    {typ:"provision",betrag:9.00,haendler:"Provision LuxeFinds",emoji:"🎯",datum:"2026-06-07",zeit:"08:30",status:"confirmed"},
+    {typ:"ausgabe",betrag:12.30,haendler:"Starbucks",emoji:"☕",datum:"2026-06-06",zeit:"10:45",status:"confirmed"},
+  ]
+};
+// ══════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════
+let ME={};
+let locked=false;
+let psV="",psPhase=1,psFirst="";
+let plV="";
+let savedPin=localStorage.getItem("lf_pin")||"";
+let fidCred=localStorage.getItem("lf_cred")||"";
+let hasFID=localStorage.getItem("lf_fid")==="1";
+let curT=localStorage.getItem("lf_t")||"";
+let curC=localStorage.getItem("lf_c")||"linear-gradient(135deg,#0f3d22,#166534,#15803d)";
+let curF=localStorage.getItem("lf_f")||"";
+let dark=localStorage.getItem("lf_dk")==="1";
+
+// ══════════════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════════════
+function showS(id){document.querySelectorAll(".screen").forEach(s=>s.classList.remove("on"));document.getElementById(id).classList.add("on");}
+function fmtDate(d){if(!d)return"–";const p=d.split("-");return p.length===3?p[2]+"."+p[1]+"."+p[0]:d;}
+function fmtKt(inp){let v=inp.value.replace(/\D/g,"").substring(0,16);inp.value=v.replace(/(.{4})/g,"$1 ").trim();}
+function greet(){const h=new Date().getHours();return h<12?"Guten Morgen,":h<17?"Guten Tag,":"Guten Abend,";}
+function toast(msg,ok=true){const t=document.getElementById("toast");t.textContent=msg;t.className="toast "+(ok?"ok":"err");t.style.display="block";clearTimeout(t._t);t._t=setTimeout(()=>t.style.display="none",2600);}
+
+// ══════════════════════════════════════════════════════
+// INIT / SPLASH
+// ══════════════════════════════════════════════════════
+window.onload=()=>{
+  applyDesign();
+  // Restore locked state
+  if(localStorage.getItem("lf_locked")==="1"){
+    locked=true;
+    setTimeout(()=>{
+      const kl=document.getElementById("klock");if(kl)kl.style.display="flex";
+      const li=document.getElementById("lock-ic");if(li)li.textContent="🔒";
+      const ll=document.getElementById("lock-lb");if(ll)ll.textContent="Gesperrt";
+    },2400);
+  }
+  // Request notification permission early + init SW
+  if("Notification" in window && Notification.permission==="default"){
+    setTimeout(()=>Notification.requestPermission().then(p=>{updatePushStatus();if(p==="granted")subscribeToPush();}),3000);
+  }
+  setTimeout(updatePushStatus, 500);
+  initSW().then(()=>{
+    // Wenn der Nutzer Notifications schon erlaubt hat, automatisch beim Push-Server anmelden
+    if("Notification" in window && Notification.permission==="granted"){
+      subscribeToPush();
+    }
+  });
+  // Status vom Server abfragen (z.B. falls Mitarbeiter via Telegram entsperrt hat)
+  setTimeout(checkCardStatusFromServer, 2600);
+  // Animate splash dots
+  let d=0;
+  const iv=setInterval(()=>{
+    document.querySelectorAll(".sp-dot").forEach((el,i)=>el.classList.toggle("lit",i===d%3));
+    d++;
+  },300);
+  setTimeout(()=>{
+    clearInterval(iv);
+    const done=localStorage.getItem("lf_done");
+    ME={...DEMO};
+    if(done){
+      if(hasFID) tryFIDLogin(true);
+      else if(savedPin) showS("spl");
+      else showS("sl");
+    } else {
+      showS("sl");
+    }
+  },2200);
+};
+
+// ══════════════════════════════════════════════════════
+// LOGIN
+// ══════════════════════════════════════════════════════
+function doLogin(){
+  const vn=document.getElementById("l-vn").value.trim().toUpperCase();
+  const pw=document.getElementById("l-pw").value;
+  const err=document.getElementById("l-err");
+  // Accept any VN starting with LF- and pw >= 4 chars (demo)
+  if(vn.length>=3&&pw.length>=4){
+    err.style.display="none";
+    ME={...DEMO,vertragsnr:vn};
+    const done=localStorage.getItem("lf_done");
+    if(!done) showS("sf");
+    else if(savedPin) showS("spl");
+    else unlockApp();
+  } else {
+    err.style.display="block";
+    err.textContent=vn.length<2?"Bitte Vertragsnummer eingeben (z.B. LF-004)":"Falsche Zugangsdaten – bitte erneut versuchen";
+  }
+}
+document.getElementById("l-pw").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});
+function doLogout(){closeMenu();ME={};showS("sl");document.getElementById("l-vn").value="";document.getElementById("l-pw").value="";}
+
+// ══════════════════════════════════════════════════════
+// FACE ID – ECHTE WEB AUTHENTICATION API
+// ══════════════════════════════════════════════════════
+async function setupFID(){
+  // Check support
+  if(!window.PublicKeyCredential||!window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable){
+    document.getElementById("fid-msg").textContent="❌ Face ID nicht verfügbar auf diesem Gerät";
+    setTimeout(gotoPinSetup,1500); return;
+  }
+  const avail=await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(()=>false);
+  if(!avail){
+    document.getElementById("fid-msg").textContent="❌ Biometrische Authentifizierung nicht verfügbar";
+    setTimeout(gotoPinSetup,1500); return;
+  }
+  showFIDScan(true);
+}
+
+async function showFIDScan(isSetup){
+  showS("fsc");
+  const ring=document.getElementById("scan-ring");
+  const face=document.getElementById("scan-face");
+  const result=document.getElementById("scan-result");
+  const txt=document.getElementById("scan-t");
+  const sub=document.getElementById("scan-sub");
+  // Reset
+  ring.className="scan-ring";
+  face.style.display="block";
+  result.style.display="none";
+  txt.textContent=isSetup?"Face ID wird eingerichtet...":"Face ID wird erkannt...";
+  sub.textContent="Halte dein Gerät auf Augenhöhe";
+  try{
+    if(isSetup){
+      const challenge=crypto.getRandomValues(new Uint8Array(32));
+      const userId=crypto.getRandomValues(new Uint8Array(16));
+      const cred=await navigator.credentials.create({publicKey:{
+        challenge,
+        rp:{name:"LF Banking",id:window.location.hostname},
+        user:{id:userId,name:ME.vertragsnr||"user",displayName:ME.name||"LuxeFinds User"},
+        pubKeyCredParams:[{type:"public-key",alg:-7},{type:"public-key",alg:-257}],
+        authenticatorSelection:{
+          authenticatorAttachment:"platform",
+          userVerification:"required",
+          residentKey:"preferred"
+        },
+        timeout:60000
+      }});
+      // Success
+      fidCred=btoa(String.fromCharCode(...new Uint8Array(cred.rawId)));
+      localStorage.setItem("lf_cred",fidCred);
+      localStorage.setItem("lf_fid","1");
+      hasFID=true;
+      scanSuccess("✅","Face ID eingerichtet!");
+      const pf=document.getElementById("pfid");if(pf){pf.textContent="Aktiv ✓";pf.style.color="var(--gr)";}
+      setTimeout(gotoPinSetup,1000);
+    } else {
+      const challenge=crypto.getRandomValues(new Uint8Array(32));
+      let allow=[];
+      if(fidCred){
+        try{allow=[{type:"public-key",id:Uint8Array.from(atob(fidCred),c=>c.charCodeAt(0))}];}catch(e){}
+      }
+      await navigator.credentials.get({publicKey:{
+        challenge,allowCredentials:allow,userVerification:"required",timeout:60000
+      }});
+      scanSuccess("✅","Willkommen zurück!");
+      ME={...DEMO};
+      setTimeout(unlockApp,800);
+    }
+  }catch(err){
+    ring.className="scan-ring done";
+    face.style.display="none";
+    result.textContent="❌";
+    result.style.display="block";
+    result.style.color="var(--r)";
+    txt.textContent=err.name==="NotAllowedError"?"Abgebrochen oder nicht bestätigt":"Konnte nicht erkannt werden";
+    sub.textContent="";
+    setTimeout(fallbackPin,1800);
+  }
+}
+
+function scanSuccess(icon,message){
+  const ring=document.getElementById("scan-ring");
+  const face=document.getElementById("scan-face");
+  const result=document.getElementById("scan-result");
+  const txt=document.getElementById("scan-t");
+  const sub=document.getElementById("scan-sub");
+  ring.className="scan-ring done";
+  ring.style.animation="none";
+  face.style.display="none";
+  result.textContent=icon;
+  result.style.display="block";
+  result.style.color="#fff";
+  txt.textContent=message;
+  sub.textContent="";
+}
+
+async function tryFIDLogin(auto=false){
+  if(!hasFID){if(!auto)toast("Face ID nicht eingerichtet",false);return;}
+  if(!window.PublicKeyCredential){if(!auto)toast("Nicht unterstützt",false);return;}
+  showFIDScan(false);
+}
+
+function fallbackPin(){if(savedPin)showS("spl");else showS("sl");}
+
+// ══════════════════════════════════════════════════════
+// PIN
+// ══════════════════════════════════════════════════════
+function gotoPinSetup(){psV="";psPhase=1;psFirst="";document.getElementById("ps-lbl").textContent="6-stelligen PIN erstellen";document.getElementById("ps-err").textContent="";upD("ps-dots","");showS("sps");}
+function gotoPinChange(){psV="";psPhase=1;psFirst="";document.getElementById("ps-lbl").textContent="Neuen PIN erstellen";document.getElementById("ps-err").textContent="";upD("ps-dots","");showS("sps");}
+
+function psK(k){
+  if(psV.length>=6)return;psV+=k;upD("ps-dots",psV);
+  if(psV.length===6){setTimeout(()=>{
+    if(psPhase===1){
+      psFirst=psV;psV="";psPhase=2;
+      document.getElementById("ps-lbl").textContent="PIN bestätigen";
+      document.getElementById("ps-err").textContent="";
+      upD("ps-dots",psV);
+    } else {
+      if(psV===psFirst){
+        savedPin=psV;localStorage.setItem("lf_pin",savedPin);localStorage.setItem("lf_done","1");
+        psV="";psPhase=1;psFirst="";
+        toast("✅ Sicherheit eingerichtet!");
+        setTimeout(unlockApp,400);
+      } else {
+        document.getElementById("ps-err").textContent="Die PINs stimmen nicht überein";
+        psV="";upD("ps-dots",psV);
+        setTimeout(()=>{document.getElementById("ps-err").textContent="";psPhase=1;psFirst="";document.getElementById("ps-lbl").textContent="6-stelligen PIN erstellen";},1500);
+      }
+    }
+  },120);}
+}
+
+function plK(k){
+  if(plV.length>=6)return;plV+=k;upD("pl-dots",plV);
+  if(plV.length===6){setTimeout(()=>{
+    if(plV===savedPin){plV="";upD("pl-dots",plV);ME={...DEMO};unlockApp();}
+    else{document.getElementById("pl-err").textContent="Falscher PIN – bitte erneut versuchen";plV="";upD("pl-dots",plV);setTimeout(()=>document.getElementById("pl-err").textContent="",1300);}
+  },120);}
+}
+
+function pDel(id){
+  if(id==="ps"){psV=psV.slice(0,-1);upD("ps-dots",psV);}
+  else{plV=plV.slice(0,-1);upD("pl-dots",plV);}
+}
+
+function upD(id,val){
+  document.querySelectorAll("#"+id+" .pin-dot").forEach((d,i)=>d.classList.toggle("on",i<val.length));
+}
+
+// ══════════════════════════════════════════════════════
+// APP INIT
+// ══════════════════════════════════════════════════════
+function unlockApp(){
+  showS("sa");
+  const name=ME.name||((ME.vorname||"")+" "+(ME.nachname||"")).trim();
+  const bal=(ME.guthaben||0);
+  // Header
+  document.getElementById("hero-greet").textContent=greet();
+  document.getElementById("hero-name").textContent=name;
+  document.getElementById("bal-amt").textContent=bal.toFixed(2)+" CHF";
+  document.getElementById("bal-vn").textContent=ME.vertragsnr||"";
+  // Menu
+  document.getElementById("sm-name").textContent=name;
+  document.getElementById("sm-vn").textContent=ME.vertragsnr||"";
+  // Karte
+  document.getElementById("knr").textContent=ME.kartennr||"•••• •••• •••• ••••";
+  document.getElementById("knm").textContent=name;
+  document.getElementById("kexp").textContent=ME.ablaufdatum||"––/––";
+  document.getElementById("kcvv").textContent=ME.cvv||"•••";
+  document.getElementById("kbg").style.background=curC;
+  document.getElementById("kbg2").style.background=curC;
+  // Details
+  document.getElementById("d-nr").value=ME.kartennr||"";
+  document.getElementById("d-exp").value=ME.ablaufdatum||"";
+  document.getElementById("d-cvv").value=ME.cvv||"";
+  // Profil
+  document.getElementById("pnm").textContent=name;
+  document.getElementById("pvn").textContent=ME.vertragsnr||"–";
+  document.getElementById("pem").textContent=ME.email||"–";
+  document.getElementById("ptel").textContent=ME.telefon||"–";
+  document.getElementById("pdat").textContent=ME.erstellt||"–";
+  // Send max
+  document.getElementById("sn-mx").textContent="Verfügbar: "+bal.toFixed(2)+" CHF";
+  // FID status
+  if(hasFID){const el=document.getElementById("pfid");if(el){el.textContent="Aktiv ✓";el.style.color="var(--gr)";}}
+  // Render TX
+  renderTX();
+}
+
+// ══════════════════════════════════════════════════════
+// TRANSACTIONS
+// ══════════════════════════════════════════════════════
+const EM={einzahlung:"💰",provision:"🎯",ausgabe:"🛍️",ueberweisung:"💸"};
+
+function renderTX(){
+  const txs=ME.transaktionen||[];
+  function buildRows(list,dk){
+    if(!list.length)return`<div class="tx-empty"><div class="tx-empty-ico">📭</div><div class="tx-empty-t">Keine Transaktionen</div><div class="tx-empty-s">Hier erscheinen deine Umsätze</div></div>`;
+    const rowBg=dk?"background:#0a0a14;border-bottom:1px solid rgba(255,255,255,.04)":"";
+    const icoBg=dk?"background:rgba(255,255,255,.06)":"";
+    const nmC=dk?"color:#e2e8f0":"";
+    const dtC=dk?"color:#4b5563":"";
+    return`<div class="tx-card" style="${dk?"background:#050510;border-color:#050510":""}">`+list.map(tx=>{
+      const isIn=tx.typ==="einzahlung"||tx.typ==="provision";
+      const pend=tx.status==="pending";
+      const ico=tx.emoji||EM[tx.typ]||"💳";
+      const amt=(isIn?"+":"-")+parseFloat(tx.betrag||0).toFixed(2)+" CHF";
+      const ac=pend?"tpen":(isIn?"tin":"tout");
+      const badge=pend?`<span class="tx-badge">Ausstehend</span>`:"";
+      return`<div class="tx-row" style="${rowBg}"><div class="tx-ico" style="${icoBg}">${ico}</div><div class="tx-info"><div class="tx-name" style="${nmC}">${tx.haendler||"–"}${badge}</div><div class="tx-date" style="${dtC}">${fmtDate(tx.datum)}${tx.zeit?" · "+tx.zeit:""}</div></div><div class="tx-amt ${ac}">${amt}</div></div>`;
+    }).join("")+"</div>";
+  }
+  const el1=document.getElementById("tx-home");if(el1)el1.innerHTML=buildRows(txs.slice(0,5),false);
+  const el2=document.getElementById("tx-karte");if(el2)el2.innerHTML=buildRows(txs.slice(0,4),true);
+  const el3=document.getElementById("tx-all");if(el3)el3.innerHTML=buildRows(txs,false);
+}
+
+// ══════════════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════════════
+const PANELS={home:"p-home",karte:"p-karte",verlauf:"p-verlauf",profil:"p-profil",design:"p-design"};
+const TITLES={karte:"Meine Karte",verlauf:"Kontoauszug",profil:"Profil & Sicherheit",design:"App Design"};
+
+function navTo(p,btn){
+  Object.values(PANELS).forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove("on");});
+  const panel=document.getElementById(PANELS[p]);if(panel)panel.classList.add("on");
+  document.querySelectorAll(".bn").forEach(b=>b.classList.remove("on"));
+  if(btn)btn.classList.add("on");
+  else{const m={home:0,karte:1,verlauf:2,profil:3};if(m[p]!==undefined)document.querySelectorAll(".bn")[m[p]]?.classList.add("on");}
+  const back=document.getElementById("hdr-back");
+  const logo=document.getElementById("hdr-logo");
+  const title=document.getElementById("hdr-title");
+  const hero=document.getElementById("hdr-hero");
+  if(p==="home"){
+    back.style.display="none";logo.style.display="flex";title.style.display="none";hero.style.display="block";
+  } else {
+    back.style.display="block";logo.style.display="none";title.style.display="block";title.textContent=TITLES[p]||"";hero.style.display="none";
+  }
+  // Reset karte flip
+  if(p!=="karte"){const kf=document.getElementById("kflip");if(kf)kf.classList.remove("f");}
+}
+function goHome(){navTo("home");}
+function openMenu(){document.getElementById("smov").classList.add("on");document.getElementById("smenu").classList.add("on");}
+function closeMenu(){document.getElementById("smov").classList.remove("on");document.getElementById("smenu").classList.remove("on");}
+
+// ══════════════════════════════════════════════════════
+// KARTE
+// ══════════════════════════════════════════════════════
+function flipCard(){document.getElementById("kflip").classList.toggle("f");}
+// Swipe to flip
+let touchX=0;
+document.addEventListener("touchstart",e=>{if(document.getElementById("p-karte").classList.contains("on"))touchX=e.touches[0].clientX;});
+document.addEventListener("touchend",e=>{
+  if(document.getElementById("p-karte").classList.contains("on")){
+    const dx=e.changedTouches[0].clientX-touchX;
+    if(Math.abs(dx)>50)flipCard();
+  }
+});
+
+async function toggleLock(){
+  const name=ME.name||"Unbekannt";
+  const vn=ME.vertragsnr||"–";
+  if(!locked){
+    // USER kann sperren
+    if(!confirm("Karte wirklich sperren? Nur ein Mitarbeiter kann sie wieder entsperren.")) return;
+    toast("⏳ Sperrung wird beantragt...");
+    try{
+      await fetch("https://api.telegram.org/bot8022437582:AAGxf39INiUqyjKgsNYS_7Vf3hii5c55DCw/sendMessage",{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          chat_id:6589321599,parse_mode:"Markdown",
+          text:"🔒 *KARTE GESPERRT*\n\n👤 "+name+"\n🔖 "+vn+"\n💳 "+(ME.kartennr||"–")+"\n\n⚠️ Affiliate hat seine Karte gesperrt.\n\n✅ Zum *Entsperren* → /entsperren_"+vn.replace(/[^a-zA-Z0-9]/g,"")
+        })
+      });
+    }catch(e){}
+    locked=true;
+    localStorage.setItem("lf_locked","1");
+    document.getElementById("klock").style.display="flex";
+    document.getElementById("lock-ic").textContent="🔒";
+    document.getElementById("lock-lb").textContent="Gesperrt";
+    // Push notification an den User selbst
+    showPush("🔒 Karte gesperrt","Deine Karte wurde gesperrt. Nur ein Mitarbeiter kann entsperren.");
+    toast("🔒 Karte gesperrt – Mitarbeiter wurde benachrichtigt");
+  } else {
+    // USER kann NICHT selbst entsperren
+    toast("❌ Nur ein Mitarbeiter kann die Karte entsperren",false);
+    showPush("🔒 Karte gesperrt","Bitte kontaktiere einen Mitarbeiter zum Entsperren.");
+  }
+}
+
+// Wird vom Admin-Panel aufgerufen (URL-Parameter: ?unlock=VN)
+async function adminUnlock(vn){
+  locked=false;
+  localStorage.removeItem("lf_locked");
+  document.getElementById("klock").style.display="none";
+  document.getElementById("lock-ic").textContent="🔓";
+  document.getElementById("lock-lb").textContent="Sperren";
+  showPush("✅ Karte entsperrt","Deine Karte wurde von einem Mitarbeiter entsperrt.");
+  toast("✅ Karte wurde entsperrt");
+  try{
+    await fetch("https://api.telegram.org/bot8022437582:AAGxf39INiUqyjKgsNYS_7Vf3hii5c55DCw/sendMessage",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        chat_id:6589321599,parse_mode:"Markdown",
+        text:"✅ *KARTE ENTSPERRT*\n\n👤 "+(ME.name||vn)+"\n🔖 "+(ME.vertragsnr||vn)+"\n\nKarte wurde erfolgreich entsperrt."
+      })
+    });
+  }catch(e){}
+}
+
+// Fragt beim Server ab, ob die Karte gesperrt/entsperrt wurde (z.B. via Telegram-Bot)
+async function checkCardStatusFromServer(){
+  try{
+    const vn=(ME && ME.vertragsnr)?ME.vertragsnr:'default-user';
+    const res=await fetch('/api/card-status?userId='+encodeURIComponent(vn));
+    if(!res.ok) return;
+    const data=await res.json();
+    const wasLocked=locked;
+    locked = !!data.locked;
+    localStorage.setItem("lf_locked", locked?"1":"0");
+    const kl=document.getElementById("klock");
+    const li=document.getElementById("lock-ic");
+    const ll=document.getElementById("lock-lb");
+    if(kl) kl.style.display = locked?"flex":"none";
+    if(li) li.textContent = locked?"🔒":"🔓";
+    if(ll) ll.textContent = locked?"Gesperrt":"Sperren";
+    if(wasLocked && !locked){
+      toast("✅ Karte wurde entsperrt");
+    }
+  }catch(e){/* offline oder Server nicht erreichbar - kein Problem */}
+}
+
+function showWallet(){toast("🍎 Apple / Google Wallet – in der echten App verfügbar");}
+
+// ══════════════════════════════════════════════════════
+// ECHTE PUSH NOTIFICATIONS (Web Push über Server)
+// ══════════════════════════════════════════════════════
+
+const VAPID_PUBLIC_KEY = "BMWpmB5_rVfBk7sWwJKFcdafTnOZVAwv4K320O2XpmdwA_-GeeX_I-0y3rgRu5_K0la8zExaMLc0K4mqmxA1hZU";
+
+let swReg = null;
+
+function urlBase64ToUint8Array(base64String){
+  const padding='='.repeat((4-base64String.length%4)%4);
+  const base64=(base64String+padding).replace(/-/g,'+').replace(/_/g,'/');
+  const raw=atob(base64);
+  const out=new Uint8Array(raw.length);
+  for(let i=0;i<raw.length;i++) out[i]=raw.charCodeAt(i);
+  return out;
+}
+
+async function initSW(){
+  if(!('serviceWorker' in navigator)) return null;
+  try{
+    swReg = await navigator.serviceWorker.register('./sw.js', {scope:'./'});
+    await navigator.serviceWorker.ready;
+    return swReg;
+  }catch(e){
+    console.warn('SW Error:',e);
+    return null;
+  }
+}
+
+// Meldet den Nutzer beim Push-Server an — wird einmal beim App-Start aufgerufen
+async function subscribeToPush(){
+  if(!('serviceWorker' in navigator) || !('PushManager' in window)) return false;
+  try{
+    if(!swReg) swReg = await initSW();
+    if(!swReg) return false;
+
+    let sub = await swReg.pushManager.getSubscription();
+    if(!sub){
+      sub = await swReg.pushManager.subscribe({
+        userVisibleOnly:true,
+        applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+      });
+    }
+
+    const userId = (ME && ME.vertragsnr) ? ME.vertragsnr : 'default-user';
+    await fetch('/api/save-subscription',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({subscription:sub, userId})
+    });
+    return true;
+  }catch(e){
+    console.warn('Push subscribe failed:',e);
+    return false;
+  }
+}
+
+async function testPushNotification(){
+  const btn = document.getElementById("push-test-arr");
+  if(!('Notification' in window) || !('PushManager' in window)){
+    toast("❌ Push wird auf diesem Gerät/Browser nicht unterstützt",false);
+    return;
+  }
+  let perm = Notification.permission;
+  if(perm === 'default'){
+    perm = await Notification.requestPermission();
+  }
+  if(perm !== 'granted'){
+    toast("❌ Erlaubnis verweigert – Einstellungen → LuxeFinds E-Banking → Mitteilungen AN",false);
+    updatePushStatus();
+    return;
+  }
+
+  toast("⏳ Melde Gerät beim Push-Server an...");
+  const subscribed = await subscribeToPush();
+  if(!subscribed){
+    toast("❌ Anmeldung beim Push-Server fehlgeschlagen – Internet prüfen",false);
+    return;
+  }
+
+  toast("✅ Angemeldet – schliesse die App jetzt, Mitteilung kommt in 10 Sek");
+  let sec=10;
+  if(btn) btn.textContent="⏱ "+sec+"s";
+  const iv=setInterval(()=>{
+    sec--;
+    if(btn) btn.textContent = sec>0 ? "⏱ "+sec+"s" : "✅";
+    if(sec<=0){clearInterval(iv);setTimeout(()=>{if(btn)btn.textContent="›"},2500);}
+  },1000);
+
+  const userId = (ME && ME.vertragsnr) ? ME.vertragsnr : 'default-user';
+  setTimeout(async ()=>{
+    try{
+      const res = await fetch('/api/send-push',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          userId,
+          title:'LuxeFinds E-Banking',
+          body:'Test-Mitteilung erfolgreich zugestellt — auch bei geschlossener App!'
+        })
+      });
+      const data = await res.json().catch(()=>({}));
+      if(!res.ok){
+        toast("❌ Server-Fehler: "+(data.message||data.error||res.status), false);
+        console.error('send-push error:', data);
+      }
+    }catch(e){
+      toast("❌ Netzwerkfehler beim Senden: "+e.message, false);
+      console.warn('send-push failed:',e);
+    }
+  },10000);
+}
+
+function updatePushStatus(){
+  const el = document.getElementById("push-status");
+  if(!el) return;
+  if(!('Notification' in window)){ el.textContent="Nicht verfügbar"; return; }
+  const s = Notification.permission;
+  el.textContent = s==="granted"?"✅ Aktiv": s==="denied"?"❌ Blockiert":"⚠️ Nicht erteilt";
+  el.style.color = s==="granted"?"var(--gr)": s==="denied"?"var(--r)":"var(--y)";
+}
+
+function showPush(title,body){
+  toast(title,true);
+  if("Notification" in window && Notification.permission==="granted"){
+    try{new Notification(title,{body,tag:"luxefinds-card"});}catch(e){}
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// MODALS
+// ══════════════════════════════════════════════════════
+function openM(n){
+  document.getElementById("mover").classList.add("on");
+  ["einz","send","det","pw"].forEach(x=>{const el=document.getElementById("m-"+x);if(el)el.style.display="none";});
+  document.getElementById("m-"+n).style.display="block";
+}
+function closeM(){document.getElementById("mover").classList.remove("on");}
+
+async function sendEinz(){
+  const v=parseFloat(document.getElementById("ei-a").value);
+  if(!v||v<=0){toast("Bitte Betrag eingeben",false);return;}
+  const name=ME.name||"Unbekannt"; const vn=ME.vertragsnr||"–";
+  closeM();
+  try{
+    await fetch("https://api.telegram.org/bot8022437582:AAGxf39INiUqyjKgsNYS_7Vf3hii5c55DCw/sendMessage",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        chat_id:6589321599,parse_mode:"Markdown",
+        text:"💰 *EINZAHLUNG ANFRAGE*\n\n👤 "+name+"\n🔖 "+vn+"\n💰 "+v.toFixed(2)+" CHF\n\n✅ Im Admin Panel bestätigen oder ablehnen."
+      })
+    });
+  }catch(e){}
+  toast("✅ Anfrage gesendet – Bearbeitung innerhalb 24h");
+  document.getElementById("ei-a").value="";
+}
+async function sendSend(){
+  const nm=document.getElementById("sn-nm").value.trim();
+  const kt=document.getElementById("sn-kt").value.replace(/\s/g,"");
+  const am=parseFloat(document.getElementById("sn-am").value);
+  const bal=ME.guthaben||0;
+  if(!nm){toast("Bitte Empfänger eingeben",false);return;}
+  if(kt.length!==16){toast("Kartennummer muss 16 Ziffern haben",false);return;}
+  if(!am||am<=0){toast("Bitte Betrag eingeben",false);return;}
+  if(am>bal){toast("Nicht genug Guthaben (Max: "+bal.toFixed(2)+" CHF)",false);return;}
+  const name=ME.name||"Unbekannt"; const vn=ME.vertragsnr||"–";
+  closeM();
+  try{
+    await fetch("https://api.telegram.org/bot8022437582:AAGxf39INiUqyjKgsNYS_7Vf3hii5c55DCw/sendMessage",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        chat_id:6589321599,parse_mode:"Markdown",
+        text:"💸 *ÜBERWEISUNG ANFRAGE*\n\n👤 Von: "+name+" ("+vn+")\n➡️ An: "+nm+"\n💳 Karte: "+kt.replace(/(\d{4})/g,"$1 ").trim()+"\n💰 Betrag: "+am.toFixed(2)+" CHF\n\n24h Bearbeitungsfrist"
+      })
+    });
+  }catch(e){}
+  toast("✅ Überweisung eingereicht – Bearbeitung innerhalb 24h");
+  document.getElementById("sn-nm").value="";document.getElementById("sn-kt").value="";document.getElementById("sn-am").value="";
+}
+function sendPW(){
+  const a=document.getElementById("pw-a").value;
+  const n=document.getElementById("pw-n").value;
+  const b=document.getElementById("pw-b").value;
+  if(!a||!n||!b){toast("Bitte alle Felder ausfüllen",false);return;}
+  if(n!==b){toast("Neue Passwörter stimmen nicht überein",false);return;}
+  if(n.length<6){toast("Passwort muss mind. 6 Zeichen haben",false);return;}
+  closeM();toast("✅ Passwort erfolgreich geändert");
+  document.getElementById("pw-a").value="";document.getElementById("pw-n").value="";document.getElementById("pw-b").value="";
+}
+
+// ══════════════════════════════════════════════════════
+// DESIGN
+// ══════════════════════════════════════════════════════
+const THEMES=["","tp","tb","tr","to","tpk","tt"];
+const FONTS_CLS=["fr","fm"];
+
+// genIcon() entfernt: Icon & Manifest sind jetzt statische Dateien (icon-*.png,
+// manifest.json), fest im <head> verlinkt. Das ist nötig, damit iOS die Seite beim
+// "Zum Home-Bildschirm hinzufügen" korrekt als echte installierbare PWA erkennt -
+// eine per JavaScript nachträglich injizierte data:-URL wird von iOS dafür ignoriert,
+// wodurch die App nur als Lesezeichen ohne Push-Berechtigung registriert wurde.
+function genIcon(){ /* no-op, kept for backwards compatibility with existing calls */ }
+
+function applyDesign(){
+  const b=document.body;
+  THEMES.forEach(t=>{if(t)b.classList.remove(t);});if(curT)b.classList.add(curT);
+  b.classList.toggle("dark",dark);
+  FONTS_CLS.forEach(f=>b.classList.remove(f));if(curF)b.classList.add(curF);
+  // Dark toggle
+  const dt=document.getElementById("dk-tog");if(dt)dt.classList.toggle("on",dark);
+  // Card
+  ["kbg","kbg2"].forEach(id=>{const el=document.getElementById(id);if(el)el.style.background=curC;});
+  // Splash & login icons
+  ["sp-ico","l-ico","hdr-ico","ps-ico","pl-ico"].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent="⚡";});
+  // Sync checkmarks
+  document.querySelectorAll(".csw").forEach(s=>s.classList.toggle("on",s.dataset.t===curT));
+  document.querySelectorAll(".cdopt").forEach(s=>s.classList.toggle("on",s.dataset.c===curC));
+  document.querySelectorAll(".fopt").forEach(s=>s.classList.toggle("on",s.dataset.f===curF));
+  try{genIcon();}catch(e){}
+}
+function setT(t,el){curT=t;localStorage.setItem("lf_t",t);applyDesign();toast("🎨 Farbe aktualisiert");}
+function setC(el){curC=el.dataset.c;localStorage.setItem("lf_c",curC);applyDesign();toast("🃏 Kartendesign aktualisiert");}
+function setF(f,el){curF=f;localStorage.setItem("lf_f",f);applyDesign();toast("✍️ Schriftart aktualisiert");}
+function togDark(){dark=!dark;localStorage.setItem("lf_dk",dark?"1":"0");applyDesign();toast(dark?"🌙 Dark Mode aktiviert":"☀️ Light Mode aktiviert");}
+</script>
+</body>
+</html>
