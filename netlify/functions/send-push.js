@@ -4,11 +4,16 @@
 const webpush = require('web-push');
 const { safeGetStore } = require('./_blob-helper');
 
-webpush.setVapidDetails(
-  'mailto:admin@luxefinds.example',
-  process.env.VAPID_PUBLIC_KEY,
-  process.env.VAPID_PRIVATE_KEY
-);
+const VAPID_PUBLIC = process.env.VAPID_PUBLIC_KEY;
+const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY;
+
+if (VAPID_PUBLIC && VAPID_PRIVATE) {
+  webpush.setVapidDetails(
+    'mailto:admin@luxefinds.example',
+    VAPID_PUBLIC,
+    VAPID_PRIVATE
+  );
+}
 
 exports.handler = async (event) => {
   const headers = {
@@ -22,6 +27,14 @@ exports.handler = async (event) => {
   }
 
   try {
+    if (!VAPID_PUBLIC || !VAPID_PRIVATE) {
+      return {
+        statusCode: 500,
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: 'VAPID_PUBLIC_KEY oder VAPID_PRIVATE_KEY fehlt in Environment Variables' })
+      };
+    }
+
     const body = JSON.parse(event.body || '{}');
     const userId = body.userId || 'default-user';
     const title = body.title || 'LuxeFinds E-Banking';
@@ -40,7 +53,21 @@ exports.handler = async (event) => {
 
     const payload = JSON.stringify({ title, body: message });
 
-    await webpush.sendNotification(subscription, payload);
+    try {
+      await webpush.sendNotification(subscription, payload, { TTL: 60 });
+    } catch (pushErr) {
+      return {
+        statusCode: 500,
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          error: 'sendNotification failed',
+          message: pushErr.message,
+          pushStatusCode: pushErr.statusCode,
+          pushBody: pushErr.body,
+          pushHeaders: pushErr.headers
+        })
+      };
+    }
 
     return {
       statusCode: 200,
@@ -51,7 +78,7 @@ exports.handler = async (event) => {
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: err.message })
+      body: JSON.stringify({ error: err.message, stack: err.stack })
     };
   }
 };
